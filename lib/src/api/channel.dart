@@ -320,8 +320,12 @@ class Channel {
 
   /// Delete this channel. Messages are permanently removed.
   Future<EmptyResponse> delete() async {
-    final response = await _client.delete(_channelURL);
-    return _client.decode(response.data, EmptyResponse.fromJson);
+    try {
+      final response = await _client.delete(_channelURL);
+      return _client.decode(response.data, EmptyResponse.fromJson);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Removes all messages from the channel
