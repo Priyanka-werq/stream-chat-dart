@@ -1185,9 +1185,7 @@ class ChannelClientState {
       }
     }
 
-    var watchers = _channelState.watchers
-        .map((e) => _channel.client.state.users[e.id] ?? e)
-        .toList();
+    var watchers = _channelState?.watchers?.map((e) => _channel.client.state.users[e.id] ?? e)?.toList();
 
     if (watchers != null && watchers.length > 0) {
       for (var i = 0; i < watchers.length; i++) {
