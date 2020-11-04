@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:logging/logging.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:stream_chat/src/api/retry_queue.dart';
@@ -1150,15 +1151,15 @@ class ChannelClientState {
     return newMessage;
   }
 
-  Message _lastMessageFromOtherUser(String ownUserId) {
-    Message lastMessage;
-
+  Message _lastMessageFromOtherUser() {
+    final ownUserId = _channel.client.state?.user?.id;
+    Message lastMessage = null;
     try {
-      var messagesList = messages;
-      if (messages != null && messagesList.isNotEmpty) {
+      List<Message> messagesList = messages;
+      if (messages != null && messagesList.length > 0) {
         for (var i = messagesList.length; i >= 0; i--) {
-          var message = messagesList[i];
-          if (message.deletedAt == null && message.user.id != ownUserId) {
+          Message message = messagesList[i - 1];
+          if (message.user.id != ownUserId) {
             lastMessage = message;
             break;
           }
@@ -1173,34 +1174,34 @@ class ChannelClientState {
 
   DateTime get lastActiveDate {
     final ownUserId = _channel.client.state?.user?.id;
-    var lastActive = _channel.createdAt.toLocal();
-    if(lastActive== null ) lastActive = DateTime.now();
+    DateTime lastActive = _channel.createdAt;
+    if (lastActive == null) lastActive = DateTime.now();
 
-    Message message =_lastMessageFromOtherUser(ownUserId);
-    if(message!=null){
-      final jiffyDate = message.createdAt?.toLocal();
-      if(jiffyDate.isAfter(lastActive)){
-        lastActive= message.createdAt.toLocal();
+    Message message = _lastMessageFromOtherUser();
+    if (message != null) {
+      final jiffyDate = Jiffy(message.createdAt);
+      if (jiffyDate.isAfter(Jiffy(lastActive))) {
+        lastActive = message.createdAt;
       }
     }
 
-    if(watchers!=null && watchers.length>0){
+    var watchers = _channelState.watchers
+        .map((e) => _channel.client.state.users[e.id] ?? e)
+        .toList();
+
+    if (watchers != null && watchers.length > 0) {
       for (var i = 0; i < watchers.length; i++) {
-
-        if(watchers[i].id==null||watchers[i].lastActive== null)
-        continue;
+        if (watchers[i].id == null || watchers[i].lastActive == null) continue;
         //final jiffyDate = Jiffy(lastActive);
-        if(lastActive.isBefore(watchers[i].lastActive.toLocal())){
-          if(ownUserId == watchers[i].id) continue;
+        if (lastActive.isBefore(watchers[i].lastActive)) {
+          if (ownUserId == watchers[i].id) continue;
 
-          lastActive= watchers[i].lastActive.toLocal();
+          lastActive = watchers[i].lastActive;
         }
-        
       }
     }
 
     return lastActive;
-
   }
 
   /// Channel message list
