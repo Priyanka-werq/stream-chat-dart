@@ -1150,6 +1150,59 @@ class ChannelClientState {
     return newMessage;
   }
 
+  Message _lastMessageFromOtherUser(String ownUserId) {
+    Message lastMessage;
+
+    try {
+      var messagesList = messages;
+      if (messages != null && messagesList.isNotEmpty) {
+        for (var i = messagesList.length; i >= 0; i--) {
+          var message = messagesList[i];
+          if (message.deletedAt == null && message.user.id != ownUserId) {
+            lastMessage = message;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      print('Message $e');
+    }
+
+    return lastMessage;
+  }
+
+  DateTime get lastActiveDate {
+    final ownUserId = _channel.client.state?.user?.id;
+    var lastActive = _channel.createdAt.toLocal();
+    if(lastActive== null ) lastActive = DateTime.now();
+
+    Message message =_lastMessageFromOtherUser(ownUserId);
+    if(message!=null){
+      final jiffyDate = message.createdAt?.toLocal();
+      if(jiffyDate.isAfter(lastActive)){
+        lastActive= message.createdAt.toLocal();
+      }
+    }
+
+    if(watchers!=null && watchers.length>0){
+      for (var i = 0; i < watchers.length; i++) {
+
+        if(watchers[i].id==null||watchers[i].lastActive== null)
+        continue;
+        //final jiffyDate = Jiffy(lastActive);
+        if(lastActive.isBefore(watchers[i].lastActive.toLocal())){
+          if(ownUserId == watchers[i].id) continue;
+
+          lastActive= watchers[i].lastActive.toLocal();
+        }
+        
+      }
+    }
+
+    return lastActive;
+
+  }
+
   /// Channel message list
   List<Message> get messages => _channelState.messages;
 
