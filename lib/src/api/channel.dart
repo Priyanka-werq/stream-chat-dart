@@ -1185,7 +1185,9 @@ class ChannelClientState {
       }
     }
 
-    var watchers = _channelState?.watchers?.map((e) => _channel.client.state.users[e.id] ?? e)?.toList();
+    var watchers = _channelState?.watchers
+        ?.map((e) => _channel.client.state.users[e.id] ?? e)
+        ?.toList();
 
     if (watchers != null && watchers.length > 0) {
       for (var i = 0; i < watchers.length; i++) {
@@ -1222,6 +1224,11 @@ class ChannelClientState {
   List<Member> get members => _channelState.members
       .map((e) => e.copyWith(user: _channel.client.state.users[e.user.id]))
       .toList();
+
+  List<Member> get otherMembers {
+    
+    return members.where((element) => element.user.id != _channel.client.state?.user?.id).toList();
+  } 
 
   /// Channel members list as a stream
   Stream<List<Member>> get membersStream => CombineLatestStream.combine2<
