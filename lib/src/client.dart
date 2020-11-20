@@ -527,7 +527,7 @@ class Client {
     final defaultOptions = {
       'state': true,
       'watch': true,
-      'presence': false,
+      'presence': true,
     };
 
     var payload = <String, dynamic>{

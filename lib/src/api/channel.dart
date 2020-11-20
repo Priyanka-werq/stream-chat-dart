@@ -841,6 +841,8 @@ class ChannelClientState {
 
     _listenMemberRemoved();
 
+    _listenWatchEvents();
+
     _channel._client.offlineStorage
         ?.getChannelThreads(_channel.cid)
         ?.then((threads) {
@@ -890,6 +892,18 @@ class ChannelClientState {
       updateChannelState(channelState.copyWith(
         members: List.from(
             channelState.members..removeWhere((m) => m.userId == user.id)),
+      ));
+    });
+  }
+
+  void _listenWatchEvents() {
+    _channel.on('user.watching.start','user.watching.stop').listen((Event e) {
+      final member = e.member;
+      updateChannelState(channelState.copyWith(
+        members: [
+          ...channelState.members,
+          member,
+        ],
       ));
     });
   }
@@ -1226,9 +1240,10 @@ class ChannelClientState {
       .toList();
 
   List<Member> get otherMembers {
-    
-    return members.where((element) => element.user.id != _channel.client.state?.user?.id).toList();
-  } 
+    return members
+        .where((element) => element.user.id != _channel.client.state?.user?.id)
+        .toList();
+  }
 
   /// Channel members list as a stream
   Stream<List<Member>> get membersStream => CombineLatestStream.combine2<
