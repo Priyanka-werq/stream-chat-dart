@@ -643,24 +643,24 @@ class Channel {
    Future<void> queryUsers() async {
     List<String> otherUsersId = [];
     for (var i = 0; i < state.channelState.members.length; i++) {
-      if (otherUsersId != _client.state.user.id) {
+      if (state.channelState.members[i].userId != _client.state.user.id) {
         otherUsersId.add(state.channelState.members[i].userId);
       }
     }
-    print('list of other user is at StreamChannel $otherUsersId');
-    Map<String, dynamic> filtermap = {'id': otherUsersId};
+    //print('list of other user is at StreamChannel $otherUsersId');
+    Map<String, dynamic> filtermap = {
+      'id': {
+        "\$in": otherUsersId
+      },
+    };
     final response = await _client.queryUsers(filter: filtermap);
-    for (var i = 0; i < response.users.length; i++) {
-      print('queryUsersResponse: ${response.users[i].toString()}');
+    List<User> tempUserList = response.users;
 
-      state.channelState.watchers
-          .removeWhere((element) => element.id == response.users[i].id);
-    }
-    
     if (response.users != null) {
       state?.updateChannelState(state.channelState.copyWith(
-        watchers: response.users,
-    ));
+        watchers:
+            tempUserList.where((element) => element.online == true).toList(),
+      ));
     }
   }
 
