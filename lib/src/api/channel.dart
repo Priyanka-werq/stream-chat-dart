@@ -449,7 +449,7 @@ class Channel {
     final watchOptions = Map<String, dynamic>.from({
       'state': true,
       'watch': true,
-      'presence': false,
+      'presence': true,
     })
       ..addAll(options);
 
@@ -921,14 +921,28 @@ class ChannelClientState {
   }
 
   void _listenWatchEvents() {
-    _channel.on('user.watching.start','user.watching.stop').listen((Event e) {
-      final member = e.member;
-      updateChannelState(channelState.copyWith(
-        members: [
-          ...channelState.members,
-          member,
-        ],
-      ));
+
+    _channel.on('user.watching.start', 'user.watching.stop').listen((Event e) {
+      channelState.watchers.removeWhere((element) => element.id == e.user.id);
+      try {
+        if (e.type == 'user.watching.start') {
+          updateChannelState(channelState.copyWith(
+            watchers: [
+              ...channelState.watchers,
+              e.user,
+            ],
+          ));
+        }
+
+        if (e.type == 'user.watching.stop') {
+          updateChannelState(channelState.copyWith(
+            watchers: List.from(
+                channelState.watchers..removeWhere((m) => m.id == e.user.id)),
+          ));
+        }
+      } catch (e) {
+        print('watch exception $e');
+      }
     });
   }
 
@@ -1210,18 +1224,20 @@ class ChannelClientState {
     return lastMessage;
   }
 
-  DateTime get lastActiveDate {
+  User get lastActiveUser {
     final ownUserId = _channel.client.state?.user?.id;
-    DateTime lastActive = _channel.createdAt;
-    if (lastActive == null) lastActive = DateTime.now();
+    DateTime lastActive = _channel.state.otherMembers[0]?.user?.lastActive;
+    User lastActiveUser = _channel.state.otherMembers[0]?.user;
 
-    Message message = _lastMessageFromOtherUser();
-    if (message != null) {
-      final jiffyDate = Jiffy(message.createdAt);
-      if (jiffyDate.isAfter(Jiffy(lastActive))) {
-        lastActive = message.createdAt;
+    /*for (var i = 0; i < _channel.state.otherMembers.length; i++) {
+      final jdLastActive = Jiffy(lastActive?.toLocal());
+      final jdMemberLastActive =
+          Jiffy(_channel.state.otherMembers[i].user.lastActive?.toLocal());
+      if (jdMemberLastActive.isAfter(Jiffy(lastActive))) {
+        lastActive = _channel.state.otherMembers[i].user.lastActive;
+        lastActiveUser = _channel.state.otherMembers[i].user;
       }
-    }
+    }*/
 
     var watchers = _channelState?.watchers
         ?.map((e) => _channel.client.state.users[e.id] ?? e)
@@ -1231,15 +1247,17 @@ class ChannelClientState {
       for (var i = 0; i < watchers.length; i++) {
         if (watchers[i].id == null || watchers[i].lastActive == null) continue;
         //final jiffyDate = Jiffy(lastActive);
-        if (lastActive.isBefore(watchers[i].lastActive)) {
-          if (ownUserId == watchers[i].id) continue;
-
+        if (ownUserId == watchers[i].id) continue;
+        final jdLastActive = Jiffy(lastActive?.toLocal());
+        final jdWatcherLastActive = Jiffy(watchers[i].lastActive?.toLocal());
+        if (jdLastActive.isBefore(jdWatcherLastActive)) {
           lastActive = watchers[i].lastActive;
+          lastActiveUser = watchers[i];
+          print('watchers-$i ${watchers[i].lastActive.toString()}');
         }
       }
     }
-
-    return lastActive;
+    return lastActiveUser;
   }
 
   /// Channel message list

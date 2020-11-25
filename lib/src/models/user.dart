@@ -103,4 +103,9 @@ class User {
 
   @override
   int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'User(id: $id, role: $role, lastActive: $lastActive, online: $online, extraData: $extraData)';
+  }
 }
